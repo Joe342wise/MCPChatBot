@@ -1,0 +1,22 @@
+{
+  "name": "serpapi-mcp-chat",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "astro": "^5.0.0",
+    "tailwindcss": "^4.3.0"
+  }
+}

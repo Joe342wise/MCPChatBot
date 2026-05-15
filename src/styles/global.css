@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+}
+
+@custom-variant message-user (&.user);
+@custom-variant message-bot (&.bot);
+
+#messages {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+#messages::-webkit-scrollbar {
+  display: none;
+}

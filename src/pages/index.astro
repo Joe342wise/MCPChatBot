@@ -1,0 +1,211 @@
+---
+import "../styles/global.css";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SerpApi MCP Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-slate-950 text-slate-200 min-h-screen font-sans antialiased">
+    <div class="max-w-2xl mx-auto px-4 py-8 flex flex-col h-screen">
+      <header class="text-center mb-6 shrink-0">
+        <h1 class="text-2xl font-bold text-amber-400">SerpApi MCP Chat</h1>
+        <p class="text-sm text-slate-400 mt-1">
+          Ask anything &mdash; powered by SerpApi + FastMCP
+        </p>
+      </header>
+
+      <main class="flex flex-col flex-1 min-h-0">
+        <div
+          id="messages"
+          class="flex-1 overflow-y-auto mb-4 flex flex-col gap-3 px-1"
+        ></div>
+
+        <form id="chat-form" class="flex gap-2 shrink-0">
+          <input
+            type="text"
+            id="query-input"
+            placeholder="e.g. latest AI news"
+            autocomplete="off"
+            required
+            class="flex-1 px-4 py-3 rounded-lg border border-slate-700 bg-slate-800 text-slate-200 text-sm outline-none focus:border-amber-400 placeholder:text-slate-500"
+          />
+          <button
+            type="submit"
+            class="px-5 py-3 rounded-lg bg-amber-500 text-slate-950 text-sm font-semibold cursor-pointer transition-colors hover:bg-amber-400"
+          >
+            Send
+          </button>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      const form = document.getElementById('chat-form');
+      const input = document.getElementById('query-input');
+      const messages = document.getElementById('messages');
+
+      function addMessage(html, isUser) {
+        const div = document.createElement('div');
+        if (isUser) {
+          div.className =
+            'bg-slate-800 text-amber-400 self-end rounded-xl px-4 py-3 max-w-[85%] text-sm leading-relaxed break-words';
+          div.textContent = html;
+        } else {
+          div.className = 'self-start w-full flex flex-col gap-4';
+          div.innerHTML = html;
+        }
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function resultCard(r) {
+        const link = r.link || '#';
+        return `<div class="bg-slate-800 rounded-xl px-4 py-3 text-sm leading-relaxed space-y-1.5">
+          <a
+            href="${link}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-amber-400 font-semibold hover:text-amber-300 hover:underline no-underline"
+          >
+            ${escapeHtml(r.title || 'Untitled')}
+          </a>
+          <p class="text-slate-300">${escapeHtml(r.snippet || '')}</p>
+          <p class="text-slate-500 text-xs truncate">${escapeHtml(link)}</p>
+        </div>`;
+      }
+
+      function escapeHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+      }
+
+      function showLoading() {
+        const div = document.createElement('div');
+        div.className =
+          'bg-slate-800 text-slate-400 self-start rounded-xl px-4 py-3 text-sm';
+        const span = document.createElement('span');
+        span.className = 'loading-dots';
+        span.textContent = 'Searching';
+        div.appendChild(span);
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+
+        let dots = 0;
+        const interval = setInterval(() => {
+          dots = (dots + 1) % 4;
+          span.textContent = 'Searching' + '.'.repeat(dots);
+        }, 400);
+
+        return { el: div, interval };
+      }
+
+      function addFollowUps(query) {
+        const chips = [
+          `More about ${query}`,
+          `Latest ${query} news`,
+          `${query} vs alternatives`,
+        ];
+
+        const html = `<div class="flex flex-wrap gap-2 mt-1">
+          ${chips
+            .map(
+              (c) =>
+                `<button class="follow-up text-xs px-3 py-1.5 rounded-full border border-slate-600 text-slate-300 bg-transparent cursor-pointer transition-colors hover:border-amber-400 hover:text-amber-400" data-query="${escapeHtml(c)}">${escapeHtml(c)}</button>`,
+            )
+            .join('')}
+        </div>`;
+
+        addMessage(html, false);
+      }
+
+      function addResults(results, query) {
+        const cards = results.map(resultCard).join('\n');
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'self-start w-full flex flex-col gap-4';
+
+        wrapper.innerHTML =
+          `<p class="text-sm text-slate-400">Here's what I found for <span class="text-amber-400 font-medium">${escapeHtml(query)}</span>:</p>` +
+          cards +
+          `<p class="text-sm text-slate-500 mt-1">Ask a follow-up or try a new search.</p>`;
+
+        messages.appendChild(wrapper);
+        messages.scrollTop = messages.scrollHeight;
+        addFollowUps(query);
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const query = input.value.trim();
+        if (!query) return;
+
+        addMessage(query, true);
+        input.value = '';
+
+        const { el: loading, interval } = showLoading();
+
+        try {
+          const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query }),
+          });
+
+          const data = await res.json();
+          clearInterval(interval);
+          loading.remove();
+
+          if (data.error) {
+            addMessage(
+              `<div class="bg-slate-800 rounded-xl px-4 py-3 text-sm leading-relaxed text-red-400">Error: ${escapeHtml(data.error)}</div>`,
+              false,
+            );
+          } else if (data.results && data.results.length > 0) {
+            addResults(data.results, query);
+          } else if (data.results && data.results.length === 0) {
+            addMessage(
+              `<div class="bg-slate-800 rounded-xl px-4 py-3 text-sm leading-relaxed text-slate-200">Didn't find anything for <span class="text-amber-400">${escapeHtml(query)}</span> — try different keywords?</div>`,
+              false,
+            );
+          } else if (data.text) {
+            addMessage(
+              `<div class="bg-slate-800 rounded-xl px-4 py-3 text-sm leading-relaxed text-slate-200">${escapeHtml(data.text)}</div>`,
+              false,
+            );
+          }
+        } catch (err) {
+          clearInterval(interval);
+          loading.remove();
+          addMessage(
+            `<div class="bg-slate-800 rounded-xl px-4 py-3 text-sm leading-relaxed text-red-400">Error: ${escapeHtml(err.message)}</div>`,
+            false,
+          );
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.follow-up');
+        if (btn) {
+          input.value = btn.dataset.query;
+          form.requestSubmit();
+        }
+      });
+
+      addMessage(
+        '<div class="bg-slate-800 rounded-xl px-4 py-3 text-sm leading-relaxed text-slate-200">Hi! Ask me anything and I\'ll search the web for you.</div>',
+        false,
+      );
+    </script>
+  </body>
+</html>
