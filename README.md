@@ -1,75 +1,95 @@
-# SerpApi MCP Chat Bot
+# SerpApi MCP Chat
 
-A web chat interface powered by **SerpApi** + **FastMCP** — ask questions and get real-time web search results.
+A web search chat interface powered by [SerpApi](https://serpapi.com/) and the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/).
 
-## Architecture
+Ask a question — the frontend sends it to a FastMCP server which calls SerpApi and returns organic search results.
 
-```
-Browser ──fetch──▶ Astro (/api/chat) ──MCP JSON-RPC──▶ FastMCP Server ──serpapi SDK──▶ serpapi.com
-```
+Built for the **SerpApi PyCon US Raffle** (May 2026).
+
+---
+
+## Stack
+
+| Layer | Stack |
+|-------|-------|
+| Frontend | Astro 5 (SSR), Tailwind CSS v4 |
+| Backend | Python, FastMCP (`mcp[cli]`), SerpApi SDK |
+| Package manager | pnpm (Node), pip (Python) |
+| Deploy | Standalone Node adapter (`@astrojs/node`) |
+
+---
 
 ## Quick Start
 
-### 1. Get a SerpApi key
+### Prerequisites
 
-Sign up at https://serpapi.com/users/sign_up (250 free searches) and get your key at https://serpapi.com/manage-api-key
+- [Node.js 23+](https://nodejs.org/)
+- [pnpm](https://pnpm.io/)
+- [Python 3.13+](https://www.python.org/)
+- A [SerpApi API key](https://serpapi.com/manage-api-key) (free tier: 250 searches/month)
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/Joe342wise/serpside.git
+cd serpside
+pnpm install
+pip install -r server/requirements.txt
+```
 
 ### 2. Set your API key
 
-```bash
-export SERPAPI_API_KEY=your_key_here
+Create a `.env` file in the project root:
+
+```
+SERPAPI_API_KEY=your_key_here
 ```
 
-### 3. Install Python dependencies
+### 3. Run
 
 ```bash
-cd server
-pip install -r requirements.txt
-```
-
-### 4. Install Node.js dependencies
-
-```bash
-npm install
-```
-
-### 5. Start both servers
-
-**Terminal 1 — FastMCP server:**
-
-```bash
-cd server
-python server.py
-```
-
-**Terminal 2 — Astro dev server:**
-
-```bash
-npm run dev
-```
-
-Or use the convenience script:
-
-```bash
-chmod +x run.sh
 ./run.sh
 ```
 
-### 6. Open the chat
+This starts both servers in parallel:
 
-Visit **http://localhost:3000** and start searching.
+- **FastMCP** → `http://localhost:8001/mcp`
+- **Chat UI** → `http://localhost:3000`
 
-## How It Works
+Open `http://localhost:3000` and start searching.
 
-1. You type a query into the chat UI
-2. Astro API route receives the POST request
-3. It sends MCP JSON-RPC messages to the FastMCP server (`localhost:8001/mcp`)
-4. FastMCP calls SerpApi's Python SDK to search Google
-5. Results flow back through the chain to the browser
+---
 
-## Raffle Compliance
+## How it works
 
-- ✅ Uses SerpApi Python SDK
-- ✅ Built with FastMCP (MCP protocol)
-- ✅ Public GitHub repo with code + setup instructions
-- ✅ Working interactive prototype
+1. You type a query in the chat UI
+2. Astro's API route (`POST /api/chat`) sends it to the FastMCP server via the MCP streamable HTTP transport
+3. The FastMCP server calls SerpApi's Google search engine and returns organic results
+4. Results are rendered as cards with links and snippets
+
+---
+
+## Project structure
+
+```
+server/
+  server.py          — FastMCP server with SerpApi search tool
+  requirements.txt   — Python dependencies
+src/
+  pages/
+    index.astro      — Chat UI
+    api/chat.ts      — API route that proxies queries to the MCP server
+  styles/
+    global.css       — Tailwind base styles
+astro.config.mjs     — Astro config (SSR, Node adapter, Tailwind)
+run.sh               — Launches both servers
+```
+
+---
+
+## Raffle Entry
+
+Built by Joseph Osei Yaw Nyarko for the **SerpApi PyCon US Raffle**.
+
+- App: [serpchat.osei.app](https://serpchat.osei.app)
+- Repo: [Serp MCP Chat](https://github.com/Joe342wise/MCPChatBot.git)
